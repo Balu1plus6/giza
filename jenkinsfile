@@ -1,0 +1,100 @@
+pipeline {
+    agent any
+    environment {
+        AWS_ACCOUNT_ID="007242146314"
+        AWS_DEFAULT_REGION="us-east-1"
+        IMAGE_REPO_NAME="core"
+        REPOSITORY_URI="007242146314.dkr.ecr.us-east-1.amazonaws.com/core"
+    }
+
+    stages {
+        stage('Logging into AWS ECR') {
+            steps {
+                script {
+                    sh """aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"""
+                }
+            }
+        }
+        stage('git checkout') {
+            steps {
+                git branch: 'master', url: 'https://github.com/Balu1plus6/core_1.git'
+            }
+        }
+
+        stage('Execute AWS CLI Commands') {
+            steps {
+                script {
+                    def TagValue = sh(
+                        returnStdout: true,
+                        script: "aws ecr describe-images --repository-name ${IMAGE_REPO_NAME} --query 'imageDetails[*].imageTags' --output text|xargs -n1 | sort -V |tail -1"
+                    ).trim()
+
+                    echo "${TagValue}"
+
+                    def updateValue = sh(
+                        returnStdout: true,
+                        script: "echo ${TagValue} | cut -d . -f2 "
+                    ).trim()
+
+                    def leftValue = sh(
+                        returnStdout: true,
+                        script: """
+                            if [[ ${updateValue} == "9" ]]; then
+                                echo "${TagValue}" |cut -d . -f1| awk '{ printf  \$1 + 1 }'
+                            else
+                                echo ${TagValue} | cut -d . -f1
+                            fi
+                        """
+                    ).trim()
+
+                    def lastValue = sh(
+                        returnStdout: true,
+                        script: """
+                            if [[ ${updateValue} == "9" ]]; then
+                                echo "0"
+                            else
+                                echo ${updateValue} | awk '{ printf  \$1 + 1 }'
+                            fi
+                        """
+                    ).trim()
+
+                    def LAST_TAG = "${leftValue}.${lastValue}"
+
+                    echo "UpdatedValue: ${updateValue}"
+                    echo "tag_left_value: ${leftValue}"
+                    echo "LASTTAG: ${LAST_TAG}"
+
+                    // Export updateValue as an environment variable for use in other stages
+                    env.updateValue = updateValue
+                    env.leftValue = leftValue
+					env.leftValue = lastValue
+                    env.LAST_TAG = LAST_TAG
+                }
+            }
+        }
+
+        stage('Building Docker Image') {
+            steps {
+                script {
+                    // Access the updateValue environment variable
+                    echo "This is the updated tag value: ${env.updateValue}"
+					echo "This is the Last tag value: ${env.lastValue}"
+                    echo "This is the left tag value: ${env.leftValue}"
+                    echo "This is the Last tag value: ${env.LAST_TAG}"
+					dockerImage = docker.build "${IMAGE_REPO_NAME}:${LAST_TAG}"
+					
+                    
+                }
+            }
+        }
+		stage('Pushing to ECR') {
+            steps {
+                script {
+                    sh """docker tag ${IMAGE_REPO_NAME}:${LAST_TAG} ${REPOSITORY_URI}:${LAST_TAG}"""
+                    sh """docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}:${LAST_TAG}"""
+                }
+            }
+        }
+        
+    }
+}
