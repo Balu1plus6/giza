@@ -1,8 +1,5 @@
 FROM ubuntu:20.04  
 LABEL maintainer="Balaji" 
-RUN  apt-get -y update && apt-get -y install nginx
-COPY default.html /etc/nginx/sites-available/default
-COPY index.html /usr/share/nginx/html/index.html
 ## Set workdir in Docker Container
 # set default workdir in your docker container
 # In other words your scripts will run from this directory
@@ -21,5 +18,3 @@ RUN pip3 install -r requirements.txt
 
 ## Make Docker container executable
 ENTRYPOINT ["/usr/bin/python3", "inference.py"]
-EXPOSE 80
-CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
