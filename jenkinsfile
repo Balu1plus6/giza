@@ -17,7 +17,7 @@ pipeline {
         }
         stage('git checkout') {
             steps {
-                git branch: 'master', url: 'https://github.com/Balu1plus6/core.git'
+                git branch: 'master', url: 'https://github.com/Balu1plus6/giza.git'
             }
         }
 
