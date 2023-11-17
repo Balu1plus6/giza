@@ -3,8 +3,8 @@ pipeline {
     environment {
         AWS_ACCOUNT_ID="007242146314"
         AWS_DEFAULT_REGION="us-east-1"
-        IMAGE_REPO_NAME="core"
-        REPOSITORY_URI="007242146314.dkr.ecr.us-east-1.amazonaws.com/core"
+        IMAGE_REPO_NAME="giza"
+        REPOSITORY_URI="007242146314.dkr.ecr.us-east-1.amazonaws.com/giza"
     }
 
     stages {
